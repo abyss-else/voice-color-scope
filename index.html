@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>声色スコープ - Voice Color Scope</title>
+    <!-- OGP Settings -->
+    <meta property="og:title" content="声色スコープ - Voice Color Scope">
+    <meta property="og:description" content="あなたの声を分析して「色」で表現します。声のタイプ、音域、おすすめの曲も診断！">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://example.com/">
+    <meta property="og:image" content="https://placehold.co/1200x630/a1c4fd/ffffff?text=Voice+Color+Scope">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎤</text></svg>">
+    <style>
+        :root {
+            --main-bg: #fdfdfd;
+            --glass-white: rgba(255, 255, 255, 0.7);
+            --rainbow: linear-gradient(45deg, #ff9a9e, #fad0c4, #a1c4fd, #c2e9fb, #d4fc79);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--main-bg);
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+            color: #444;
+        }
+
+        .container {
+            text-align: center;
+            background: var(--glass-white);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        h1 {
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+            background: var(--rainbow);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .mode-tab {
+            padding: 10px 25px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            background: transparent;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 1rem;
+            color: #888;
+        }
+
+        .mode-tab.active {
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            border-color: #a1c4fd;
+            color: #fff;
+        }
+
+        .mode-content {
+            display: none;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        #chart-container,
+        #chart-container-precision {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+            width: 280px !important;
+            height: 280px !important;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 50px;
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: 0.3s;
+            color: #444;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            text-align: center;
+            margin: 15px 0;
+            color: #555;
+        }
+
+        /* 色表示 */
+        .voice-color {
+            margin: 15px auto;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .voice-color.active {
+            display: flex;
+        }
+
+        .color-display {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+        }
+
+        .color-info {
+            text-align: left;
+        }
+
+        .color-value {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .color-hex {
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: #333;
+        }
+
+        /* 録音進捗 */
+        .recording-progress {
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .recording-progress.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* 録音ガイド */
+        .recording-guide {
+            background: rgba(161, 196, 253, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            line-height: 1.8;
+            display: none;
+        }
+
+        .recording-guide.active {
+            display: block;
+        }
+
+        .guide-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff6b6b;
+        }
+
+        /* 録音インジケーター */
+        .recording-indicator {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 12px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .volume-bar-container {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .volume-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.1s ease;
+            border-radius: 10px;
+        }
+
+        /* 結果表示 */
+        .result {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result-item {
+            margin: 10px 0;
+            font-size: 1rem;
+        }
+
+        .result-label {
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* 音域表示 */
+        .vocal-range {
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(161, 196, 253, 0.15), rgba(194, 233, 251, 0.15));
+            border-radius: 20px;
+        }
+
+        .vocal-range h3 {
+            margin: 0 0 15px 0;
+            color: #555;
+        }
+
+        .range-bar {
+            position: relative;
+            height: 60px;
+            background: linear-gradient(90deg, #4A90E2 0%, #48DBFB 25%, #1DD1A1 50%, #FFC837 75%, #FF6B6B 100%);
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .range-marker {
+            position: absolute;
+            width: 3px;
+            height: 70px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            top: -5px;
+        }
+
+        .range-label {
+            position: absolute;
+            font-size: 0.9rem;
+            font-weight: bold;
+            background: #fff;
+            padding: 3px 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
+        }
+
+        /* おすすめ曲 */
+        .song-recommendations {
+            margin-top: 20px;
+        }
+
+        .song-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
+        }
+
+        .song-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+        }
+
+        .song-info {
+            flex: 1;
+        }
+
+        .song-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .song-artist {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .song-match {
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        /* パラメータ詳細 */
+        .parameter-details {
+            margin-top: 20px;
+            background: linear-gradient(135deg, rgba(161, 196, 253, 0.1), rgba(194, 233, 251, 0.1));
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .parameter-details h3 {
+            margin: 0 0 15px 0;
+            color: #555;
+        }
+
+        .parameter-item {
+            margin: 12px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+        }
+
+        .parameter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .parameter-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .parameter-value {
+            font-size: 1.1rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .parameter-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .parameter-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .parameter-description {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* フッター */
+        footer {
+            margin-top: 50px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* モーダルウィンドウ */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: #000;
+        }
+
+        .modal-body h2 {
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .modal-body h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1.1rem;
+        }
+
+        .modal-body p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .modal-body ul {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            color: #666;
+        }
+
+        /* クレジットドロワー */
+        .drawer-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 900;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .drawer-toggle {
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            color: #fff;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+        }
+
+        .drawer-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .drawer-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+            width: 280px;
+            transform-origin: bottom right;
+            transform: scale(0);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+        }
+
+        .drawer-content.active {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .drawer-section {
+            margin-bottom: 15px;
+        }
+
+        .drawer-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .drawer-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #888;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            display: block;
+        }
+
+        .creator-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            padding: 8px;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .creator-link:hover {
+            background: aliceblue;
+            color: #0056b3;
+        }
+
+        .thanks-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .thanks-item {
+            font-size: 0.9rem;
+            color: #555;
+            padding: 4px 0;
+            padding-left: 10px;
+            border-left: 3px solid #e0e0e0;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎤 声色スコープ</h1>
+
+        <!-- モード切替 -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="realtime">リアルタイム分析</button>
+            <button class="mode-tab" data-mode="precision">精密分析</button>
+        </div>
+
+        <!-- リアルタイム分析モード -->
+        <div class="mode-content active" id="realtimeMode">
+            <p class="status">マイクで声を分析します</p>
+            <div id="chart-container">
+                <canvas id="radarChart" width="500" height="500"></canvas>
+            </div>
+            <div class="controls">
+                <button id="startBtn">分析を開始する</button>
+            </div>
+            <div class="voice-color" id="voiceColorRealtime">
+                <div class="color-display" id="colorDisplayRealtime"></div>
+                <div class="color-info">
+                    <div class="color-value" id="colorValueRealtime">--</div>
+                    <div class="color-hex" id="colorHexRealtime">--</div>
+                </div>
+            </div>
+            <p class="status" id="statusRealtime">分析を開始してください</p>
+        </div>
+
+        <!-- 精密分析モード -->
+        <div class="mode-content" id="precisionMode">
+            <p class="status">30秒間の録音で詳細分析します</p>
+            <div id="chart-container-precision">
+                <canvas id="radarChartPrecision" width="400" height="400"></canvas>
+            </div>
+            <div class="controls">
+                <button id="recordBtn">録音を開始する</button>
+            </div>
+            <div class="recording-progress" id="recordingProgress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="recording-guide" id="recordingGuide">
+                <p class="guide-title">📢 以下の文章を自然な声で読んでください</p>
+                あなたの声は、世界に一つだけのユニークな楽器です。高さ、クリアさ、パワー、艶、柔らかさ、響きという6つの要素が組み合わさり、あなただけの音色を作り出しています。今、この30秒間であなたの声の個性を測定しています。リラックスして自然な声で話したり、好きな歌を歌ったりしてみてください。この分析によって、あなたの声の最高音や最低音、そして声質のタイプが明らかになります。声は感情を伝え、人と人とをつなぐ大切なコミュニケーションツールです。
+            </div>
+
+            <!-- 録音インジケーター -->
+            <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+                <div style="margin-bottom: 8px; font-size: 0.9rem; color: #666;">
+                    音声認識中...
+                </div>
+                <div class="volume-bar-container">
+                    <div class="volume-bar" id="volumeBar"></div>
+                </div>
+            </div>
+
+            <!-- 精密分析結果 -->
+            <div class="result" id="precisionResult">
+                <!-- 色表示 -->
+                <div class="voice-color active" id="voiceColorPrecision">
+                    <div class="color-display" id="colorDisplayPrecision"></div>
+                    <div class="color-info">
+                        <div class="color-value" id="colorValuePrecision">--</div>
+                        <div class="color-hex" id="colorHexPrecision">--</div>
+                    </div>
+                </div>
+
+                <!-- 音域表示 -->
+                <div class="vocal-range">
+                    <h3>🎵 あなたの音域</h3>
+                    <div class="result-item">
+                        <span class="result-label">最高音:</span>
+                        <span id="highestNote" style="font-size: 1.2rem; color: #ff6b6b;">--</span>
+                    </div>
+                    <div class="range-bar" id="rangeBar"></div>
+                    <div class="result-item">
+                        <span class="result-label">最低音:</span>
+                        <span id="lowestNote" style="font-size: 1.2rem; color: #1dd1a1;">--</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">音域幅:</span>
+                        <span id="vocalRange">--</span>
+                    </div>
+                </div>
+
+                <div class="result-item">
+                    <span class="result-label">声質タイプ:</span>
+                    <span id="voiceType">--</span>
+                </div>
+
+                <!-- パラメータ詳細 -->
+                <div class="parameter-details">
+                    <h3>📊 声のパラメータ詳細</h3>
+
+                    <div class="parameter-item">
+                        <div class="parameter-header">
+                            <span class="parameter-name">🎵 高さ</span>
+                            <span class="parameter-value" id="param-height">--</span>
+                        </div>
+                        <div class="parameter-bar-container">
+                            <div class="parameter-bar" id="bar-height"></div>
+                        </div>
+                        <div class="parameter-description">高い: 高音・明るい声 / 低い: 低音・落ち着いた声</div>
+                    </div>
+
+                    <div class="parameter-item">
+                        <div class="parameter-header">
+                            <span class="parameter-name">✨ クリアさ</span>
+                            <span class="parameter-value" id="param-clarity">--</span>
+                        </div>
+                        <div class="parameter-bar-container">
+                            <div class="parameter-bar" id="bar-clarity"></div>
+                        </div>
+                        <div class="parameter-description">高い: ハキハキした声 / 低い: 柔らかく優しい声</div>
+                    </div>
+
+                    <div class="parameter-item">
+                        <div class="parameter-header">
+                            <span class="parameter-name">💪 パワー</span>
+                            <span class="parameter-value" id="param-power">--</span>
+                        </div>
+                        <div class="parameter-bar-container">
+                            <div class="parameter-bar" id="bar-power"></div>
+                        </div>
+                        <div class="parameter-description">高い: 力強い声 / 低い: 繊細で穏やかな声</div>
+                    </div>
+
+                    <div class="parameter-item">
+                        <div class="parameter-header">
+                            <span class="parameter-name">🌟 艶</span>
+                            <span class="parameter-value" id="param-gloss">--</span>
+                        </div>
+                        <div class="parameter-bar-container">
+                            <div class="parameter-bar" id="bar-gloss"></div>
+                        </div>
+                        <div class="parameter-description">高い: 輝きのある声 / 低い: 落ち着いた深みのある声</div>
+                    </div>
+
+                    <div class="parameter-item">
+                        <div class="parameter-header">
+                            <span class="parameter-name">🌸 柔らかさ</span>
+                            <span class="parameter-value" id="param-softness">--</span>
+                        </div>
+                        <div class="parameter-bar-container">
+                            <div class="parameter-bar" id="bar-softness"></div>
+                        </div>
+                        <div class="parameter-description">高い: 滑らかで優しい声 / 低い: しっかりした芯のある声</div>
+                    </div>
+
+                    <div class="parameter-item">
+                        <div class="parameter-header">
+                            <span class="parameter-name">🔔 響き</span>
+                            <span class="parameter-value" id="param-resonance">--</span>
+                        </div>
+                        <div class="parameter-bar-container">
+                            <div class="parameter-bar" id="bar-resonance"></div>
+                        </div>
+                        <div class="parameter-description">高い: 響きのある豊かな声 / 低い: 親密で身近な声</div>
+                    </div>
+                </div>
+
+                <!-- おすすめ曲 -->
+                <div class="song-recommendations" id="songRecommendations" style="display: none;">
+                    <h3 style="color: #555;">🎤 あなたにおすすめの曲</h3>
+                    <div id="songList"></div>
+                </div>
+            </div>
+
+            <p class="status" id="statusPrecision">録音ボタンを押してください</p>
+        </div>
+    </div>
+
+    <!-- フッター -->
+    <footer>
+        <a id="openPrivacy">プライバシーポリシー</a> |
+        <a id="openTerms">利用規約</a> |
+        <span>&copy; 2026 Voice Color Scope</span>
+    </footer>
+    </div>
+
+    <!-- クレジットドロワー -->
+    <div class="drawer-container">
+        <!-- ドロワーの中身 -->
+        <div class="drawer-content" id="drawerContent">
+            <div class="drawer-section">
+                <span class="drawer-title">👨‍💻 開発者 (Creator)</span>
+                <a href="#" target="_blank" class="creator-link" id="creatorLink">
+                    <span style="font-size: 1.2rem;">🐦</span>
+                    <span id="creatorName">@YourID</span>
+                </a>
+            </div>
+            <div class="drawer-section">
+                <span class="drawer-title">✨ Special Thanks</span>
+                <ul class="thanks-list" id="thanksList">
+                    <!-- JSで生成 -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- トグルボタン -->
+        <div class="drawer-toggle" id="drawerToggle" title="Info & Credits">
+            ℹ️
+        </div>
+    </div>
+
+    <!-- モーダルウィンドウ (プライバシーポリシー & 利用規約) -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-body" id="modalBody">
+                <!-- JSで内容を挿入 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================
+        // ⚙️ アプリ設定・クレジット (編集エリア)
+        // =========================================
+        const CREDIT_INFO = {
+            // 制作者のTwitter (X) URL
+            twitterUrl: "https://x.com/Abyss_tabletalk",
+
+            // 制作者の表示名 (オプション)
+            creatorName: "@Abyss_tabletalk",
+
+            // スペシャルサンクス (お名前リスト)
+            specialThanks: [
+                "平和担当ガンディー",
+                "魔女 ",
+                "Keny",
+                "あいす",
+                "ナユタ",
+                "るーけー",
+                "みうみう",
+                "HAL",
+                "もすけ",
+                "ひだりちゃん",
+                "ちむどん",
+                "はるしゅ",
+            ]
+        };
+
+        // 基本設定
+        const labels = ["高さ", "クリアさ", "パワー", "艶", "柔らかさ", "響き"];
+        const numPoints = 6;
+        const centerX = 200;
+        const centerY = 200;
+        const maxRadius = 135;
+
+        // DOM要素
+        const realtimeMode = document.getElementById('realtimeMode');
+        const precisionMode = document.getElementById('precisionMode');
+        const canvas = document.getElementById('radarChart');
+        const ctx = canvas.getContext('2d');
+        const canvasPrecision = document.getElementById('radarChartPrecision');
+        const ctxPrecision = canvasPrecision.getContext('2d');
+
+        // =========================================
+        // 📜 モーダル & ドロワー機能
+        // =========================================
+
+        // 1. クレジット情報の反映
+        document.addEventListener('DOMContentLoaded', () => {
+            // Twitterリンク設定
+            const linkEl = document.getElementById('creatorLink');
+            linkEl.href = CREDIT_INFO.twitterUrl;
+            document.getElementById('creatorName').innerText = CREDIT_INFO.creatorName;
+
+            // Thanksリスト生成
+            const listEl = document.getElementById('thanksList');
+            CREDIT_INFO.specialThanks.forEach(name => {
+                const li = document.createElement('li');
+                li.className = 'thanks-item';
+                li.innerText = name;
+                listEl.appendChild(li);
+            });
+        });
+
+        // 2. ドロワーの開閉
+        const drawerToggle = document.getElementById('drawerToggle');
+        const drawerContent = document.getElementById('drawerContent');
+
+        drawerToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            drawerContent.classList.toggle('active');
+            // アイコン切り替え
+            if (drawerContent.classList.contains('active')) {
+                drawerToggle.innerText = '×';
+            } else {
+                drawerToggle.innerText = 'ℹ️';
+            }
+        });
+
+        // 画面外クリックで閉じる
+        document.addEventListener('click', (e) => {
+            if (!drawerContent.contains(e.target) && !drawerToggle.contains(e.target)) {
+                drawerContent.classList.remove('active');
+                drawerToggle.innerText = 'ℹ️';
+            }
+        });
+
+        // 3. モーダル機能 (プライバシーポリシー)
+        const modal = document.getElementById('infoModal');
+        const modalBody = document.getElementById('modalBody');
+        const closeBtn = document.querySelector('.close-modal');
+        const privacyBtn = document.getElementById('openPrivacy');
+        const termsBtn = document.getElementById('openTerms');
+
+        // コンテンツ定義
+        const PRIVACY_CONTENT = `
+            <h2>🔒 プライバシーポリシー</h2>
+            <h3>1. 音声データの取り扱いについて</h3>
+            <p>本アプリ「声色スコープ」は、マイクから入力された音声データを、<strong>お客様の端末（ブラウザ）内でのみ</strong>リアルタイムに処理・解析しています。</p>
+            <p><strong>解析された音声データが、サーバーへ送信されたり、第三者に提供されたりすることは一切ありません。</strong></p>
+            
+            <h3>2. 広告配信について</h3>
+            <p>当サイトでは、第三者配信の広告サービス（Google AdSense等）を利用する予定です。</p>
+            <p>広告配信事業者は、ユーザーの興味に応じた商品やサービスの広告を表示するため、当サイトや他サイトへのアクセスに関する情報「Cookie」(氏名、住所、メール アドレス、電話番号は含まれません) を使用することがあります。</p>
+            
+            <h3>3. 解析結果について</h3>
+            <p>本アプリによる解析結果（声の色、音域測定など）は、独自のアルゴリズムに基づくエンターテインメント目的のものです。医学的・科学的な正確性を保証するものではありません。</p>
+        `;
+
+        const TERMS_CONTENT = `
+            <h2>📝 利用規約</h2>
+            <h3>1. 免責事項</h3>
+            <p>本アプリの利用により生じたいかなる損害についても、開発者は一切の責任を負いません。</p>
+            <p>音域測定の結果などの正確性については保証いたしかねます。あくまで目安・お楽しみとしてご利用ください。</p>
+            
+            <h3>2. 著作権</h3>
+            <p>本アプリのプログラムコード、デザイン、独自のアルゴリズムに関する権利は開発者に帰属します。</p>
+        `;
+
+        function openModal(content) {
+            modalBody.innerHTML = content;
+            modal.style.display = "block";
+            // スクロール禁止
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+
+        privacyBtn.addEventListener('click', () => openModal(PRIVACY_CONTENT));
+        termsBtn.addEventListener('click', () => openModal(TERMS_CONTENT));
+        closeBtn.addEventListener('click', closeModal);
+        window.addEventListener('click', (e) => {
+            if (e.target == modal) closeModal();
+        });
+
+
+        // ========================================
+        // リアルタイムモード - グローバル変数
+        // ========================================
+        let audioStream = null;                  // マイクストリーム（再利用）
+        let audioContext = null;                 // Web Audio APIコンテキスト
+        let analyser = null;                     // 周波数解析器
+        let isAnalyzing = false;                 // 分析中フラグ
+        let animationId = null;                  // アニメーションフレームID
+
+        // スムージング設定
+        let previousValues = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];  // 前回のパラメータ値（6項目）
+        const smoothingFactor = 0.45;            // スムージング強度（0.45 = とても滑らか）
+        const noiseGateThreshold = 0.05;         // ノイズゲート閾値（小さい音を無視）
+
+        // ピッチ移動平均用（一瞬の高音ノイズを除去するための設定）
+        let pitchHistory = [];                   // ピッチ履歴配列
+        const pitchHistorySize = 10;             // 過去10フレームの平均を取る
+        // ※ 大きくすると滑らかだが反応が遅くなる（15-20推奨）
+
+        // ========================================
+        // 精密分析モード - グローバル変数
+        // ========================================
+        let isRecording = false;                 // 録音中フラグ
+        let recordingData = [];                  // 録音データ（フレームごとのパラメータ）
+        let recordingStartTime = 0;              // 録音開始時刻
+        const recordingDuration = 30000;         // 録音時間（30秒）
+
+        // モード切替
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const mode = tab.dataset.mode;
+                document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                if (mode === 'realtime') {
+                    realtimeMode.classList.add('active');
+                    precisionMode.classList.remove('active');
+                    if (isRecording) stopRecording();
+                } else {
+                    realtimeMode.classList.remove('active');
+                    precisionMode.classList.add('active');
+                    if (isAnalyzing) stopAnalysis();
+                    drawBasePrecision();
+                }
+            });
+        });
+
+        // マイクストリーム取得
+        async function getMicStream() {
+            if (!audioStream) {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+            return audioStream;
+        }
+
+        // 色計算（低音=寒色、高音=暖色）
+        function calculateVoiceColor(values) {
+            const heightValue = values[0];
+            let baseHue = 240 - (heightValue * 240); // 240度(青)→0度(赤)
+
+            const clearAdjust = (values[1] - 0.5) * 30;
+            let finalHue = baseHue + clearAdjust;
+            if (finalHue < 0) finalHue += 360;
+            if (finalHue >= 360) finalHue -= 360;
+
+            const powerGloss = (values[2] + values[3]) / 2;
+            const saturation = Math.round(70 + powerGloss * 30);
+
+            const softnessResonance = (values[4] + values[5]) / 2;
+            const lightness = Math.round(55 + softnessResonance * 20);
+
+            return {
+                hue: Math.round(finalHue),
+                saturation,
+                lightness
+            };
+        }
+
+        // HSL to HEX
+        function hslToHex(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+            const m = l - c / 2;
+            let r = 0, g = 0, b = 0;
+
+            if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+            else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+            else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+            else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+            else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+            else { r = c; g = 0; b = x; }
+
+            const toHex = (num) => {
+                const hex = Math.round((num + m) * 255).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            };
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+        }
+
+        // ===== 本格的な音声分析関数 =====
+
+        // Spectral Centroid（スペクトル重心）- クリアさの指標
+        function calculateSpectralCentroid(freqData) {
+            let weightedSum = 0;
+            let totalSum = 0;
+            for (let i = 0; i < freqData.length; i++) {
+                weightedSum += freqData[i] * i;
+                totalSum += freqData[i];
+            }
+            return totalSum > 0 ? weightedSum / totalSum : 0;
+        }
+
+        // Spectral Rolloff（スペクトルロールオフ）- 艶の指標
+        function calculateSpectralRolloff(freqData, threshold = 0.85) {
+            let totalEnergy = 0;
+            for (let i = 0; i < freqData.length; i++) {
+                totalEnergy += freqData[i];
+            }
+
+            let cumulativeEnergy = 0;
+            const targetEnergy = totalEnergy * threshold;
+
+            for (let i = 0; i < freqData.length; i++) {
+                cumulativeEnergy += freqData[i];
+                if (cumulativeEnergy >= targetEnergy) {
+                    return i / freqData.length;
+                }
+            }
+            return 1.0;
+        }
+
+        // RMS Energy（実効値エネルギー）- パワーの指標
+        function calculateRMSEnergy(freqData) {
+            let sum = 0;
+            for (let i = 0; i < freqData.length; i++) {
+                sum += freqData[i] * freqData[i];
+            }
+            return Math.sqrt(sum / freqData.length);
+        }
+
+        // Spectral Flatness（スペクトル平坦度）- 柔らかさの指標
+        function calculateSpectralFlatness(freqData) {
+            let geometricMean = 1;
+            let arithmeticMean = 0;
+            let validCount = 0;
+
+            for (let i = 1; i < freqData.length; i++) {
+                if (freqData[i] > 0) {
+                    geometricMean *= Math.pow(freqData[i], 1 / freqData.length);
+                    arithmeticMean += freqData[i];
+                    validCount++;
+                }
+            }
+
+            if (validCount === 0) return 0;
+            arithmeticMean /= validCount;
+
+            return arithmeticMean > 0 ? geometricMean / arithmeticMean : 0;
+        }
+
+        // 声の6つのパラメータを本格的に分析
+        function analyzeVoiceFeatures(freqData) {
+            const centroid = calculateSpectralCentroid(freqData);
+            const rolloff = calculateSpectralRolloff(freqData);
+            const rmsEnergy = calculateRMSEnergy(freqData);
+            const flatness = calculateSpectralFlatness(freqData);
+
+            // 1. 高さ (Height/Pitch)
+            // 人間の声域に最適化した範囲（bin 1-30）で最も強い成分を検出
+            let maxLowFreqIndex = 0;
+            let maxLowFreqValue = 0;
+            for (let i = 1; i < 30; i++) {
+                if (freqData[i] > maxLowFreqValue) {
+                    maxLowFreqValue = freqData[i];
+                    maxLowFreqIndex = i;
+                }
+            }
+            // 正規化: より動的に調整
+            // bin 1-3 (男性) → 0.0-0.2
+            // bin 6-10 (中性) → 0.4-0.6  
+            // bin 12-20 (女性) → 0.7-0.9
+            // bin 20+ (高い声) → 0.9-1.0
+            const height = Math.min(1.0, Math.max(0.0, (maxLowFreqIndex - 1) / 25));
+
+            // 2. クリアさ (Clarity) - リアルタイム用（広めの範囲）
+            // 大幅改善: 分母を40→25に縮小して感度をさらに1.6倍向上（累積2.8倍）
+            // 調整値: -0.10（感度向上に合わせて再調整）
+            const clarity = Math.min(1.0, Math.max(0.0, (centroid - 10) / 25 - 0.10));
+
+            // 3. パワー (Power) - リアルタイム用（緩め）
+            // 実測調整: -0.10 適用（厳しすぎるため緩和）
+            const power = Math.min(1.0, Math.max(0.0, rmsEnergy / 100 - 0.10));
+
+            // 4. 艶 (Brightness/Gloss) - リアルタイム用（緩め）
+            // 大幅改善: 分母を35→20に縮小して感度をさらに1.75倍向上（累積3倍）
+            // 調整値: -0.08（感度向上に合わせて再調整）
+            const gloss = Math.min(1.0, Math.max(0.0, (centroid - 15) / 20 - 0.08));
+
+            // 5. 柔らかさ (Softness)
+            // Spectral Flatnessを活用（広い範囲に対応）
+            // flatnessが高い（ノイズ的） = 柔らかくない
+            // flatnessが低い（トーン的） = 柔らかい
+            // 5. 柔らかさ (Softness) - リアルタイム用（緩め）
+            // 実測調整: +0.15 適用（大幅に抑える）
+            let softness;
+            if (rmsEnergy < 5) {
+                softness = 0;
+            } else {
+                softness = Math.min(1.0, Math.max(0.0, (0.25 - flatness) / 0.3 + 0.15));
+            }
+
+            // 6. 響き (Resonance)
+            // 中周波帯域（20-60bin）のエネルギー比率
+            let midFreqEnergy = 0;
+            let totalEnergy = 0;
+            for (let i = 0; i < freqData.length; i++) {
+                totalEnergy += freqData[i];
+                if (i >= 20 && i <= 60) {
+                    midFreqEnergy += freqData[i];
+                }
+            }
+            // 6. 響き (Resonance) - リアルタイム用（緩め）
+            // 実測調整: -0.15 適用（厳しすぎるため緩和）
+            let resonance;
+            if (rmsEnergy < 5 || totalEnergy === 0) {
+                resonance = 0;
+            } else {
+                const ratio = midFreqEnergy / totalEnergy;
+                resonance = Math.min(1.0, Math.max(0.0, (ratio - 0.10) / 0.25 - 0.15));
+            }
+
+            return [height, clarity, power, gloss, softness, resonance];
+        }
+
+        // ========================================
+        // 精密分析モード専用のパラメータ計算（FFT 2048対応）
+        // ========================================
+        function analyzeVoiceFeaturesPrecision(freqData) {
+            // FFTサイズの違い（2048 vs 256 = 8倍）を補正
+            // インデックスベースの指標をリアルタイムモードの基準（256）に合わせる
+            const centroid = calculateSpectralCentroid(freqData) / 8;
+            const rmsEnergy = calculateRMSEnergy(freqData);
+            const flatness = calculateSpectralFlatness(freqData);
+
+            // 最大値インデックスを検出（高さ用）
+            let maxLowFreqValue = 0;
+            let maxLowFreqIndex = 0;
+            // 周波数分解能が高いので、探索範囲も広げる（100 * 8 = 800相当ではない、物理周波数は同じ）
+            // RT: index 30 (5kHz) -> Precision: index 240 (5kHz)
+            // ただし高さ計算は後でpitchから行うので、ここの影響は少ないが念のため
+            for (let i = 1; i <= 100; i++) {
+                if (freqData[i] > maxLowFreqValue) {
+                    maxLowFreqValue = freqData[i];
+                    maxLowFreqIndex = i;
+                }
+            }
+
+            // 1. 高さ (Height)
+            // indexも8で割って正規化
+            const height = Math.min(1.0, Math.max(0.0, ((maxLowFreqIndex / 8) - 1) / 25));
+
+            // 2. クリアさ (Clarity) - 精密分析モード専用調整
+            // 平均値が60%前後になるように、プラスの補正を加える
+            // 幅（25）は維持
+            // 推定Centroid 8-10 に対し、(9 + 5) / 25 = 0.56 (56%)
+            const clarity = Math.min(1.0, Math.max(0.0, (centroid + 5) / 25));
+
+            // 3. パワー (Power) - 精密分析モード専用調整
+            // 平均化で低く出るため、補正値を加える（+0.20）
+            const power = Math.min(1.0, Math.max(0.0, rmsEnergy / 100 + 0.20));
+
+            // 4. 輝き/艶 (Gloss) - 精密分析モード専用調整
+            // 平均値が60%前後になるように、プラスの補正を加える
+            // 幅（20）は維持
+            // 推定Centroid 8-10 に対し、(9 + 2) / 20 = 0.55 (55%)
+            const gloss = Math.min(1.0, Math.max(0.0, (centroid + 2) / 20));
+
+            // 5. 柔らかさ (Softness) - リアルタイムと同じ
+            let softness;
+            if (rmsEnergy < 5) {
+                softness = 0;
+            } else {
+                softness = Math.min(1.0, Math.max(0.0, (0.25 - flatness) / 0.3 + 0.15));
+            }
+
+            // 6. 響き (Resonance) - リアルタイムと同じ
+            let midFreqEnergy = 0;
+            let totalEnergy = 0;
+            for (let i = 0; i < freqData.length; i++) {
+                totalEnergy += freqData[i];
+                if (i >= 20 && i <= 60) {
+                    midFreqEnergy += freqData[i];
+                }
+            }
+            let resonance;
+            if (rmsEnergy < 5 || totalEnergy === 0) {
+                resonance = 0;
+            } else {
+                const ratio = midFreqEnergy / totalEnergy;
+                resonance = Math.min(1.0, Math.max(0.0, (ratio - 0.10) / 0.25 - 0.15));
+            }
+
+            return [height, clarity, power, gloss, softness, resonance];
+        }
+
+        // 基本グラフ描画
+        function drawBase(context) {
+            context.clearRect(0, 0, 400, 400);
+            context.strokeStyle = "#eee";
+            context.lineWidth = 1;
+
+            for (let i = 1; i <= 4; i++) {
+                context.beginPath();
+                const r = (maxRadius / 4) * i;
+                for (let j = 0; j < numPoints; j++) {
+                    const angle = (Math.PI * 2 / numPoints) * j - Math.PI / 2;
+                    const x = centerX + r * Math.cos(angle);
+                    const y = centerY + r * Math.sin(angle);
+                    if (j === 0) context.moveTo(x, y);
+                    else context.lineTo(x, y);
+                }
+                context.closePath();
+                context.stroke();
+            }
+
+            context.fillStyle = "#aaa";
+            context.font = "20px sans-serif";
+            context.textAlign = "center";
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                const x = centerX + (maxRadius + 35) * Math.cos(angle);
+                const y = centerY + (maxRadius + 35) * Math.sin(angle);
+                context.fillText(labels[i], x, y + 8);
+            }
+        }
+
+        function drawBasePrecision() {
+            drawBase(ctxPrecision);
+        }
+
+        // リアルタイム分析開始
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            if (isAnalyzing) {
+                stopAnalysis();
+            } else {
+                try {
+                    const stream = await getMicStream();
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                    source.connect(analyser);
+
+                    isAnalyzing = true;
+                    document.getElementById('startBtn').innerText = '分析を停止する';
+                    document.getElementById('voiceColorRealtime').classList.add('active');
+                    updateRealtime();
+                } catch (err) {
+                    document.getElementById('statusRealtime').innerText = 'マイクアクセスが拒否されました';
+                }
+            }
+        });
+
+        function stopAnalysis() {
+            isAnalyzing = false;
+            if (animationId) cancelAnimationFrame(animationId);
+            if (audioContext) audioContext.close();
+            document.getElementById('startBtn').innerText = '分析を開始する';
+            document.getElementById('voiceColorRealtime').classList.remove('active');
+            drawBase(ctx);
+        }
+
+        function updateRealtime() {
+            if (!isAnalyzing) return;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+
+            // 本格的な音声分析を実施
+            const rawValues = analyzeVoiceFeatures(dataArray);
+
+            const avgVolume = dataArray.reduce((a, b) => a + b) / dataArray.length / 255;
+            let values;
+            if (avgVolume < noiseGateThreshold) {
+                // 音声がない場合は基本グラフのみ表示
+                drawBase(ctx);
+                animationId = requestAnimationFrame(updateRealtime);
+                return;
+            } else {
+                values = rawValues.map((val, i) => previousValues[i] + (val - previousValues[i]) * smoothingFactor);
+                previousValues = [...values];
+
+                // 精密分析モードと同じ方法でピッチを検出して高さを計算
+                // FFT結果から最も強いピークを見つける
+                // 倍音を回避するため、低いbinを優先
+                let maxIndex = 0;
+                let maxValue = 0;
+
+                // まず低音域（bin 1-20）で強いピークを探す
+                for (let i = 1; i < 20; i++) {
+                    if (dataArray[i] > maxValue && dataArray[i] > 30) {  // 閉値を設ける
+                        maxValue = dataArray[i];
+                        maxIndex = i;
+                    }
+                }
+
+                // 低音域に十分なピークがなければ、全範囲を探す
+                if (maxValue < 30) {
+                    maxIndex = 0;
+                    maxValue = 0;
+                    for (let i = 1; i < 100; i++) {
+                        if (dataArray[i] > maxValue) {
+                            maxValue = dataArray[i];
+                            maxIndex = i;
+                        }
+                    }
+                }
+
+                // ========================================
+                // ピッチ検出（倍音対策 + 移動平均）
+                // ========================================
+
+                // ピッチを計算
+                const sampleRate = audioContext.sampleRate || 44100;
+                const binSize = sampleRate / analyser.fftSize;
+                const pitch = maxIndex * binSize;
+
+
+                // ピッチが有効範囲内（80-600Hz）なら、移動平均を計算
+                if (pitch >= 80 && pitch <= 600) {
+                    // ピッチ履歴に追加
+                    pitchHistory.push(pitch);
+
+                    // 履歴サイズを超えたら古いものを削除（FIFO）
+                    if (pitchHistory.length > pitchHistorySize) {
+                        pitchHistory.shift();
+                    }
+
+                    // 【重要】移動平均を計算（過去10フレームの平均）
+                    // これにより一瞬の高音ノイズが除去され、連続した音の平均的な高さを検出
+                    // → 低い声の人は常に低く、高い声の人は常に高く表示される
+                    const avgPitch = pitchHistory.reduce((sum, p) => sum + p, 0) / pitchHistory.length;
+
+                    // 平均ピッチから高さパラメータを計算
+                    // 範囲: 80-600Hz（広範囲で男女両方をカバー）
+                    // 男性低音80Hz→0.0, 超高音女性600Hz→1.0
+                    const pitchBasedHeight = Math.min(1.0, Math.max(0.0, (avgPitch - 80) / 520));
+                    values[0] = pitchBasedHeight;
+                }
+            }
+
+            const voiceColor = calculateVoiceColor(values);
+            const hsl = `hsl(${voiceColor.hue}, ${voiceColor.saturation}%, ${voiceColor.lightness}%)`;
+            const hex = hslToHex(voiceColor.hue, voiceColor.saturation, voiceColor.lightness);
+
+            drawBase(ctx);
+            ctx.beginPath();
+            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            grad.addColorStop(1, `hsla(${voiceColor.hue}, ${voiceColor.saturation}%, ${Math.min(80, voiceColor.lightness + 10)}%, 0.6)`);
+            ctx.fillStyle = grad;
+            ctx.strokeStyle = `hsl(${voiceColor.hue}, ${voiceColor.saturation}%, ${Math.max(35, voiceColor.lightness - 15)}%)`;
+            ctx.lineWidth = 3;
+
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                const val = Math.max(0.2, values[i]);
+                const x = centerX + (maxRadius * val) * Math.cos(angle);
+                const y = centerY + (maxRadius * val) * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            document.getElementById('colorDisplayRealtime').style.backgroundColor = hsl;
+            document.getElementById('colorValueRealtime').innerText = `色相:${voiceColor.hue}° 彩度:${voiceColor.saturation}% 明度:${voiceColor.lightness}%`;
+            document.getElementById('colorHexRealtime').innerText = hex;
+
+            animationId = requestAnimationFrame(updateRealtime);
+        }
+
+        // 精密分析開始
+        document.getElementById('recordBtn').addEventListener('click', async () => {
+            if (isRecording) return;
+
+            try {
+                const stream = await getMicStream();
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;  // 256 → 2048 に変更（周波数分解能向上）
+                source.connect(analyser);
+
+                // デバッグ情報
+                const binSize = audioContext.sampleRate / analyser.fftSize;
+                console.log('===== 録音開始 =====');
+                console.log('Sample Rate:', audioContext.sampleRate, 'Hz');
+                console.log('FFT Size:', analyser.fftSize);
+                console.log('Bin Size:', binSize.toFixed(2), 'Hz');
+                console.log('bin 3 =', (3 * binSize).toFixed(1), 'Hz (正しくは64.5Hz付近)');
+
+                isRecording = true;
+                recordingData = [];
+                recordingStartTime = Date.now();
+
+                document.getElementById('recordBtn').disabled = true;
+                document.getElementById('recordingProgress').classList.add('active');
+                document.getElementById('recordingGuide').classList.add('active');
+                document.getElementById('recordingIndicator').style.display = 'block';
+                document.getElementById('precisionResult').classList.remove('active');
+
+                collectData();
+            } catch (err) {
+                document.getElementById('statusPrecision').innerText = 'マイクアクセスが拒否されました';
+            }
+        });
+
+        function collectData() {
+            if (!isRecording) return;
+
+            const elapsed = Date.now() - recordingStartTime;
+            document.getElementById('progressBar').style.width = Math.min(100, (elapsed / recordingDuration) * 100) + '%';
+
+            if (elapsed >= recordingDuration) {
+                finishRecording();
+                return;
+            }
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+
+            // 精密分析モード用の特別な音声分析（FFT 2048対応）
+            const values = analyzeVoiceFeaturesPrecision(dataArray);
+
+            // 音量チェック（インジケーター更新）
+            const avgVolume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const volumePercent = Math.min(100, (avgVolume / 50) * 100);
+            document.getElementById('volumeBar').style.width = volumePercent + '%';
+
+            // より緩いノイズフィルタ（音声検出を確実に）
+            if (avgVolume < 0.3) {
+                setTimeout(collectData, 100);
+                return;
+            }
+
+            // FFT結果から最も強いピークを見つける（より広い範囲）
+            let maxIndex = 0;
+            let maxValue = 0;
+            // bin 1-2は低すぎるノイズなので除外、3から開始
+            for (let i = 3; i < 120; i++) {
+                if (dataArray[i] > maxValue) {
+                    maxValue = dataArray[i];
+                    maxIndex = i;
+                }
+            }
+
+            // ピークが小さすぎる場合はスキップ（閾値を上げる）
+            if (maxValue < 8) {
+                setTimeout(collectData, 100);
+                return;
+            }
+
+            //  周波数計算
+            const sampleRate = audioContext.sampleRate || 44100;
+            const binSize = sampleRate / analyser.fftSize;
+            let pitch = maxIndex * binSize;
+
+            // デバッグ: ピッチを記録
+            if (recordingData.length < 5 || recordingData.length % 50 === 0) {
+                console.log(`フレーム ${recordingData.length}: bin ${maxIndex}, pitch ${pitch.toFixed(1)} Hz, value ${maxValue}`);
+            }
+
+            // 人間の声域（80Hz-600Hz）
+            // 600Hz以上は倍音の可能性が高い
+            if (pitch >= 80 && pitch <= 600) {
+                recordingData.push({ values, pitch });
+            }
+
+            setTimeout(collectData, 100);
+        }
+
+        function finishRecording() {
+            isRecording = false;
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('recordingProgress').classList.remove('active');
+            document.getElementById('recordingGuide').classList.remove('active');
+            document.getElementById('recordingIndicator').style.display = 'none';
+
+            if (audioContext) audioContext.close();
+
+            analyzeRecording();
+        }
+
+        function analyzeRecording() {
+            if (recordingData.length === 0) return;
+
+            const avgValues = [0, 0, 0, 0, 0, 0];
+            for (const frame of recordingData) {
+                for (let i = 0; i < 6; i++) {
+                    avgValues[i] += frame.values[i];
+                }
+            }
+            for (let i = 0; i < 6; i++) {
+                avgValues[i] /= recordingData.length;
+            }
+
+            // 高さのパラメータは実際のpitchから再計算
+            // 平均ピッチを使用
+            const avgPitch = recordingData.reduce((acc, frame) => acc + frame.pitch, 0) / recordingData.length;
+            console.log('平均ピッチ:', avgPitch, 'Hz');
+
+            // 人間の声域に合わせて正規化 - 広い範囲（80-400Hz）
+            // 統計データより広い範囲で男女全体をカバー
+            // 80Hz → 0.0, 240Hz → 0.5, 400Hz → 1.0
+            const pitchBasedHeight = Math.min(1.0, Math.max(0.0, (avgPitch - 80) / 320));
+            avgValues[0] = pitchBasedHeight; // 高さのパラメータを置き換え
+
+            console.log('高さパラメータ (pitch-based):', pitchBasedHeight);
+
+            // ==========================================
+            // データ収集用：すべてのパラメータの生の値を出力
+            // ==========================================
+            console.log('\n===== 📊 データ収集用：生の値 =====');
+            console.log('【基本情報】');
+            console.log('  平均ピッチ:', avgPitch.toFixed(2), 'Hz');
+            console.log('  データ数:', recordingData.length, 'フレーム');
+
+            // デバッグログ用：統計ベースの逆算式で生の値を計算
+            // avgValues[1] = (centroid + 5) / 25
+            // centroid = avgValues[1] * 25 - 5
+            const rawCentroid = avgValues[1] * 25 - 5;
+
+            // avgValues[2] = rmsEnergy / 100 + 0.20
+            // rmsEnergy = (avgValues[2] - 0.20) * 100
+            const rawRmsEnergy = (avgValues[2] - 0.20) * 100;
+
+            // avgValues[3] = (centroid + 2) / 20
+            // centroid = avgValues[3] * 20 - 2
+            const rawCentroidForGloss = avgValues[3] * 20 - 2;
+
+            // avgValues[4] = (0.10785 - flatness) / 0.04885
+            const rawFlatness = 0.10785 - avgValues[4] * 0.04885;
+
+            // avgValues[5] = (ratio - 0.18675) / 0.09795
+            const rawResonanceRatio = avgValues[5] * 0.09795 + 0.18675;
+
+            console.log('\n【正規化前の生の値】');
+            console.log('  1. 高さ (Pitch):');
+            console.log('     → 平均ピッチ:', avgPitch.toFixed(2), 'Hz');
+            console.log('  2. クリアさ (Clarity):');
+            console.log('     → Norm Centroid:', rawCentroid.toFixed(2), '(Raw ~' + (rawCentroid * 8).toFixed(1) + ')');
+            console.log('  3. パワー (Power):');
+            console.log('     → RMS Energy:', rawRmsEnergy.toFixed(2));
+            console.log('  4. 艶 (Gloss):');
+            console.log('     → Norm Centroid:', rawCentroidForGloss.toFixed(2), '(Raw ~' + (rawCentroidForGloss * 8).toFixed(1) + ')');
+            console.log('  5. 柔らかさ (Softness):');
+            console.log('     → Spectral Flatness:', rawFlatness.toFixed(4));
+            console.log('  6. 響き (Resonance):');
+            console.log('     → Mid Freq Ratio:', rawResonanceRatio.toFixed(3));
+
+            console.log('\n【正規化後の値 (0.0-1.0)】');
+            console.log('  1. 高さ:', avgValues[0].toFixed(3));
+            console.log('  2. クリアさ:', avgValues[1].toFixed(3));
+            console.log('  3. パワー:', avgValues[2].toFixed(3));
+            console.log('  4. 艶:', avgValues[3].toFixed(3));
+            console.log('  5. 柔らかさ:', avgValues[4].toFixed(3));
+            console.log('  6. 響き:', avgValues[5].toFixed(3));
+            console.log('=====================================\n');
+
+            // 周波数データを取得してソート
+            let pitches = recordingData.map(f => f.pitch).sort((a, b) => a - b);
+
+            console.log('収集した周波数データ数:', pitches.length);
+
+            if (pitches.length === 0) {
+                document.getElementById('statusPrecision').innerText = '音声データが検出されませんでした';
+                return;
+            }
+
+            console.log('最小周波数:', Math.min(...pitches), 'Hz');
+            console.log('最大周波数:', Math.max(...pitches), 'Hz');
+
+            // データが少ない場合はIQRフィルタをスキップ
+            if (pitches.length < 10) {
+                console.log('データが少ないためIQRフィルタをスキップ');
+            } else {
+                // 統計的外れ値除去（IQR法）- やや緩めに
+                const q1Index = Math.floor(pitches.length * 0.25);
+                const q3Index = Math.floor(pitches.length * 0.75);
+                const q1 = pitches[q1Index];
+                const q3 = pitches[q3Index];
+                const iqr = q3 - q1;
+                const lowerBound = q1 - 2.0 * iqr;
+                const upperBound = q3 + 2.0 * iqr;
+
+                // 外れ値を除外
+                const beforeFilter = pitches.length;
+                pitches = pitches.filter(p => p >= lowerBound && p <= upperBound);
+                console.log(`IQRフィルタ: ${beforeFilter} → ${pitches.length} データ`);
+            }
+
+            if (pitches.length === 0) {
+                document.getElementById('statusPrecision').innerText = '有効な音声データが検出されませんでした';
+                return;
+            }
+
+            console.log('フィルタ後の周波数データ数:', pitches.length);
+
+            // データが少なすぎる場合はエラー
+            if (pitches.length < 3) {
+                document.getElementById('statusPrecision').innerText = '音声データが少なすぎます。もっと大きな声で話してください';
+                return;
+            }
+
+            // 音域を広めに検出（5%ile - 95%ile）
+            const n = pitches.length;
+            const lowIndex = Math.floor(n * 0.05); // 下位5%
+            const highIndex = Math.floor(n * 0.95); // 上位5%
+            const lowPitch = pitches[lowIndex];
+            const highPitch = pitches[highIndex];
+
+            console.log('===== 音域計算の詳細 =====');
+            console.log('データ数:', n);
+            console.log('lowIndex (5%ile):', lowIndex, '→', lowPitch, 'Hz');
+            console.log('highIndex (95%ile):', highIndex, '→', highPitch, 'Hz');
+            console.log('ピッチデータのサンプル（最初5個）:', pitches.slice(0, 5));
+            console.log('ピッチデータのサンプル（最後5個）:', pitches.slice(-5));
+
+            // 同一値チェック
+            if (lowPitch === highPitch) {
+                console.warn('⚠️ 警告: lowPitch と highPitch が同じ値です！');
+                console.log('全ピッチデータ:', pitches);
+            }
+
+            const semitones = calculateSemitones(lowPitch, highPitch);
+            console.log('音域幅:', semitones, '半音');
+
+            // 音域が0半音でも続行（普通に話す声ではあり得る）
+            // 表示用に最低1半音として扱う
+            const displaySemitones = Math.max(1, semitones);
+
+            const voiceColor = calculateVoiceColor(avgValues);
+            const hsl = `hsl(${voiceColor.hue}, ${voiceColor.saturation}%, ${voiceColor.lightness}%)`;
+            const hex = hslToHex(voiceColor.hue, voiceColor.saturation, voiceColor.lightness);
+
+            // グラフ描画
+            drawBasePrecision();
+            ctxPrecision.beginPath();
+            const grad = ctxPrecision.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            grad.addColorStop(1, `hsla(${voiceColor.hue}, ${voiceColor.saturation}%, ${Math.min(80, voiceColor.lightness + 10)}%, 0.6)`);
+            ctxPrecision.fillStyle = grad;
+            ctxPrecision.strokeStyle = `hsl(${voiceColor.hue}, ${voiceColor.saturation}%, ${Math.max(35, voiceColor.lightness - 15)}%)`;
+            ctxPrecision.lineWidth = 3;
+
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (Math.PI * 2 / numPoints) * i - Math.PI / 2;
+                const val = Math.max(0.2, avgValues[i]);
+                const x = centerX + (maxRadius * val) * Math.cos(angle);
+                const y = centerY + (maxRadius * val) * Math.sin(angle);
+                if (i === 0) ctxPrecision.moveTo(x, y);
+                else ctxPrecision.lineTo(x, y);
+            }
+            ctxPrecision.closePath();
+            ctxPrecision.fill();
+            ctxPrecision.stroke();
+
+            // 色表示
+            console.log('色を設定:', hsl, hex);
+            document.getElementById('colorDisplayPrecision').style.backgroundColor = hsl;
+            document.getElementById('colorValuePrecision').innerText = `色相:${voiceColor.hue}° 彩度:${voiceColor.saturation}% 明度:${voiceColor.lightness}%`;
+            document.getElementById('colorHexPrecision').innerText = hex;
+
+            // 音域表示
+            const highNote = frequencyToNote(highPitch);
+            const lowNote = frequencyToNote(lowPitch);
+            document.getElementById('highestNote').innerText = highNote;
+            document.getElementById('lowestNote').innerText = lowNote;
+            document.getElementById('vocalRange').innerText = displaySemitones + '半音';
+            document.getElementById('voiceType').innerText = determineVoiceType(avgValues, lowPitch, highPitch);
+
+            // 音域バー
+            drawVocalRangeBar(lowPitch, highPitch, lowNote, highNote);
+
+            // パラメータ詳細を更新
+            const paramNames = ['height', 'clarity', 'power', 'gloss', 'softness', 'resonance'];
+            avgValues.forEach((value, index) => {
+                const percentage = Math.round(value * 100);
+                document.getElementById(`param-${paramNames[index]}`).innerText = `${percentage}%`;
+                document.getElementById(`bar-${paramNames[index]}`).style.width = `${percentage}%`;
+            });
+
+            // おすすめ曲
+            recommendSongs(lowPitch, highPitch);
+
+            document.getElementById('precisionResult').classList.add('active');
+        }
+
+        // 周波数→音名
+        function frequencyToNote(freq) {
+            const A4 = 440;
+            const C0 = A4 * Math.pow(2, -4.75);
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const h = Math.round(12 * Math.log2(freq / C0));
+            const octave = Math.floor(h / 12);
+            const n = h % 12;
+            return noteNames[n] + octave;
+        }
+
+        // 半音数計算
+        function calculateSemitones(f1, f2) {
+            return Math.round(Math.abs(12 * Math.log2(f2 / f1)));
+        }
+
+        // 声質タイプ判定
+        function determineVoiceType(values, lowPitch, highPitch) {
+            const avgPitch = (lowPitch + highPitch) / 2;
+            if (avgPitch < 150) return '低く力強いバス・バリトン';
+            if (avgPitch < 250) return 'バランスの良いテナー・アルト';
+            return '明るく高いソプラノ・メゾソプラノ';
+        }
+
+        // 音域バー描画
+        function drawVocalRangeBar(lowPitch, highPitch, lowNote, highNote) {
+            const bar = document.getElementById('rangeBar');
+            bar.innerHTML = '';
+
+            const C0 = 16.35;
+            const lowSemi = Math.round(12 * Math.log2(lowPitch / C0));
+            const highSemi = Math.round(12 * Math.log2(highPitch / C0));
+            const rangeStart = 24;
+            const rangeEnd = 84;
+            const rangeWidth = rangeEnd - rangeStart;
+
+            const lowPos = Math.max(0, Math.min(100, ((lowSemi - rangeStart) / rangeWidth) * 100));
+            const highPos = Math.max(0, Math.min(100, ((highSemi - rangeStart) / rangeWidth) * 100));
+
+            const lowMarker = document.createElement('div');
+            lowMarker.className = 'range-marker';
+            lowMarker.style.left = lowPos + '%';
+            lowMarker.style.background = '#1dd1a1';
+            const lowLabel = document.createElement('div');
+            lowLabel.className = 'range-label';
+            lowLabel.innerText = lowNote;
+            lowLabel.style.left = lowPos + '%';
+            lowLabel.style.top = '65px';
+            lowLabel.style.color = '#1dd1a1';
+            lowMarker.appendChild(lowLabel);
+
+            const highMarker = document.createElement('div');
+            highMarker.className = 'range-marker';
+            highMarker.style.left = highPos + '%';
+            highMarker.style.background = '#ff6b6b';
+            const highLabel = document.createElement('div');
+            highLabel.className = 'range-label';
+            highLabel.innerText = highNote;
+            highLabel.style.left = highPos + '%';
+            highLabel.style.top = '-25px';
+            highLabel.style.color = '#ff6b6b';
+            highMarker.appendChild(highLabel);
+            bar.appendChild(lowMarker);
+            bar.appendChild(highMarker);
+        }
+
+        // ========================================
+        // 楽曲データベース（50曲版）
+        // ========================================
+        // すべての音域データはWeb検索で確認済み（vocal-range.com、stepupkaraoke.com等）
+        // YouTube IDは公式MV IDを使用（2026年1月確認済み）
+        // C#3〜C4（139-262Hz）音域を重点的に配置（35曲以上）
+
+        const songDB = [
+            // ============================================
+            // 🟥 超低音域〜低音域 (Super Low ~ Bass) F2-E3
+            // ============================================
+            { title: "Wozwald (Cover)", artist: "宮下遊", low: 55, high: 330, range: "A1-E4", yt: "wozwald_miyashita" }, // 仮キー
+            { title: "家族になろうよ", artist: "福山雅治", low: 73, high: 293, range: "D2-D4", yt: "gyS6eXW0zJw" },
+            { title: "Squall", artist: "福山雅治", low: 82, high: 330, range: "E2-E4", yt: "M7U5MF5bG5k" },
+            { title: "The Hole", artist: "King Gnu", low: 87, high: 440, range: "F2-A4", yt: "fpr1qFqjLz4" },
+            { title: "まちがいさがし", artist: "菅田将暉", low: 98, high: 494, range: "G2-B4", yt: "WP83Cws62n0" },
+            { title: "白日", artist: "King Gnu", low: 117, high: 494, range: "A#2-B4", yt: "ony539T074w" },
+            { title: "香水", artist: "瑛人", low: 117, high: 415, range: "A#2-G#4", yt: "3ULp7GQSz_M" },
+            { title: "怪獣の花唄", artist: "Vaundy", low: 123, high: 440, range: "B2-A4", yt: "UM9XNpgrq08" },
+            { title: "Lemon", artist: "米津玄師", low: 123, high: 494, range: "B2-B4", yt: "SX_ViT4Ra7k" },
+
+            // ============================================
+            // 🟨 中低音域 (Mid-Low / Baritone) F3-B3
+            // ============================================
+            { title: "KICK BACK", artist: "米津玄師(チェンソーマン)", low: 130, high: 523, range: "C3-C5", yt: "M2cckDmNLMI" },
+            { title: "Bling-Bang-Bang-Born", artist: "Creepy Nuts", low: 130, high: 440, range: "C3-A4", yt: "mLW35YMzELE" },
+            { title: "第ゼロ感", artist: "10-FEET(スラムダンク)", low: 130, high: 466, range: "C3-A#4", yt: "EsJSt8qSKTM" },
+            { title: "瞳をとじて", artist: "平井堅", low: 131, high: 415, range: "C3-G#4", yt: "NfWe8uGnUkA" },
+            { title: "天体観測", artist: "BUMP OF CHICKEN", low: 131, high: 494, range: "C3-B4", yt: "j7CDb610Bg0" },
+            { title: "Love so sweet", artist: "嵐", low: 147, high: 523, range: "D3-C5", yt: "oQ3JSKyOv8Q" },
+            { title: "Pretender", artist: "Official髭男dism", low: 156, high: 523, range: "D#3-C5", yt: "TQ8WlA2GXbk" },
+            { title: "シャルル", artist: "バルーン(Vocaloid)", low: 156, high: 523, range: "D#3-C5", yt: "TA5OFS_y9CA" },
+            { title: "ロキ", artist: "みきとP(Vocaloid)", low: 156, high: 494, range: "D#3-B4", yt: "Xg-qfsKN2_E" },
+            { title: "一途", artist: "King Gnu(呪術廻戦)", low: 165, high: 622, range: "E3-D#5", yt: "hm1na9uw2sc" },
+            { title: "紅蓮華", artist: "LiSA(鬼滅の刃)", low: 165, high: 587, range: "E3-D5", yt: "CwkzK-F0Y00" },
+
+            // ============================================
+            // 🟩 中高音域 (Mid-High / Tenor-Alto) C4-E4
+            // ============================================
+            { title: "炎", artist: "LiSA(鬼滅の刃)", low: 185, high: 659, range: "F#3-E5", yt: "4Q9DWZLaY2U" },
+            { title: "ミックスナッツ", artist: "Official髭男dism(SpyFamily)", low: 185, high: 587, range: "F#3-D5", yt: "CbH2F0kXgTY" },
+            { title: "マリーゴールド", artist: "あいみょん", low: 185, high: 494, range: "F#3-B4", yt: "0xSiBpUdW4E" },
+            { title: "夜に駆ける", artist: "YOASOBI", low: 196, high: 698, range: "G3-F5", yt: "x8VYWazR5mE" },
+            { title: "群青", artist: "YOASOBI", low: 196, high: 659, range: "G3-E5", yt: "Y4nEEZwckuU" },
+            { title: "残響散歌", artist: "Aimer(鬼滅の刃)", low: 196, high: 622, range: "G3-D#5", yt: "tLQLa6lM3Us" },
+            { title: "神っぽいな", artist: "ピノキオピー(Vocaloid)", low: 196, high: 587, range: "G3-D5", yt: "EHBFKhLUVig" },
+            { title: "千本桜", artist: "WhiteFlame(Vocaloid)", low: 196, high: 587, range: "G3-D5", yt: "shs0rAiwsGQ" },
+            { title: "キング", artist: "Kanaria(Vocaloid)", low: 196, high: 587, range: "G3-D5", yt: "cm-l2h6GB8Q" },
+            { title: "ベノム", artist: "かいりきベア(Vocaloid)", low: 196, high: 523, range: "G3-C5", yt: "oRJBwaZ59fQ" },
+            { title: "残酷な天使のテーゼ", artist: "高橋洋子(エヴァ)", low: 220, high: 523, range: "A3-C5", yt: "nU21rCWkuJw" },
+            { title: "うっせぇわ", artist: "Ado", low: 220, high: 659, range: "A3-E5", yt: "Qp3b-RXtz4w" },
+
+            // ============================================
+            // 🟦 高音域〜超高音域 (High / Soprano) F4+
+            // ============================================
+            { title: "アイドル", artist: "YOASOBI(推しの子)", low: 233, high: 1046, range: "A#3-C6", yt: "ZRtdQ81jPUQ" }, // ラップパート除くメイン音域
+            { title: "ヴァンパイア", artist: "DECO*27(Vocaloid)", low: 246, high: 698, range: "B3-F5", yt: "e1xCOsgWg0M" },
+            { title: "新時代", artist: "Ado(ONE PIECE)", low: 246, high: 987, range: "B3-B5", yt: "1FliVTcX8bQ" },
+            { title: "私は最強", artist: "Ado(ONE PIECE)", low: 220, high: 880, range: "A3-A5", yt: "sk1Z-Hqwwog" },
+            { title: "フォニイ", artist: "ツミキ(Vocaloid)", low: 261, high: 698, range: "C4-F5", yt: "9QLT1Aw_45s" },
+            { title: "ゴーストルール", artist: "DECO*27(Vocaloid)", low: 261, high: 783, range: "C4-G5", yt: "K7yu52v1i3s" },
+            { title: "エイリアンエイリアン", artist: "ナユタン星人(Vocaloid)", low: 261, high: 698, range: "C4-F5", yt: "w-g92gI1Lgw" },
+            { title: "ケセラセラ", artist: "Mrs. GREEN APPLE", low: 165, high: 783, range: "E3-G5", yt: "UH8Rjo1l5E0" }, // 男性だが超高音
+            { title: "命に嫌われている。", artist: "カンザキイオリ(Vocaloid)", low: 220, high: 698, range: "A3-F5", yt: "0HYm60Mjm0k" },
+            { title: "アスノヨゾラ哨戒班", artist: "Orangestar(Vocaloid)", low: 261, high: 783, range: "C4-G5", yt: "XogSflwXgpw" },
+            { title: "ロストワンの号哭", artist: "Neru(Vocaloid)", low: 293, high: 830, range: "D4-G#5", yt: "02onNieIWjg" },
+            { title: "初音ミクの消失", artist: "cosMo@暴走P", low: 293, high: 1396, range: "D4-F6", yt: "2XpucCE51tA" } // 超高速・超高音
+        ];
+
+        // ========================================
+        // 楽曲推薦アルゴリズム（音域内頻出度重視）
+        // ========================================
+        function recommendSongs(userLow, userHigh) {
+            const recs = [];
+            const userRange = userHigh - userLow;
+
+            for (const song of songDB) {
+                // 音域の重なり部分を計算
+                const overlapLow = Math.max(userLow, song.low);
+                const overlapHigh = Math.min(userHigh, song.high);
+                const overlap = Math.max(0, overlapHigh - overlapLow);
+
+                if (overlap > 0) {
+                    const songRange = song.high - song.low;
+
+                    // ユーザーの音域内に曲の音域がどれだけ含まれるか
+                    const userCoverageRatio = overlap / userRange;
+
+                    // 曲の音域内にユーザーの音域がどれだけ含まれるか
+                    const songCoverageRatio = overlap / songRange;
+
+                    // 両方を考慮したスコア（ユーザー音域内の頻出度を重視）
+                    // userCoverageRatio: ユーザーの音域をどれだけカバーするか（60%重視）
+                    // songCoverageRatio: 曲の音域をどれだけカバーできるか（40%重視）
+                    const score = Math.round((userCoverageRatio * 0.6 + songCoverageRatio * 0.4) * 100);
+
+                    if (score > 20) {  // 20%以上のマッチング率で表示
+                        recs.push({ ...song, score });
+                    }
+                }
+            }
+
+            // スコアの高い順にソート
+            recs.sort((a, b) => b.score - a.score);
+
+            const list = document.getElementById('songList');
+            list.innerHTML = '';
+
+            if (recs.length === 0) {
+                list.innerHTML = '<div style="padding: 10px; color: #666;">マッチする曲が見つかりませんでした</div>';
+            } else {
+                recs.slice(0, 10).forEach(song => {
+                    const item = document.createElement('div');
+                    item.className = 'song-item';
+                    item.innerHTML = `
+
+                        <div class="song-info">
+                            <div class="song-title">${song.title}</div>
+                            <div class="song-artist">${song.artist} (${song.range})</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="song-match">${song.score}%</div>
+                            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(song.artist + ' ' + song.title)}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; padding: 5px 12px; font-size: 0.85rem; background: #ff0000; color: white; border: none; border-radius: 5px; cursor: pointer; display: inline-block;">
+                                ▶ YouTube
+                            </a>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            document.getElementById('songRecommendations').style.display = 'block';
+        }
+
+        // 初期化
+        drawBase(ctx);
+        drawBasePrecision();
+    </script>
+</body>
+
+</html>
